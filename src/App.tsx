@@ -1,20 +1,47 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cards, elementLabels } from "./data/cards";
 import { openPack, rarityRates } from "./systems/packs/openPack";
 import type { CharacterCard, Rarity } from "./types/game";
 
+const COLLECTION_STORAGE_KEY = "cardbound.collection.v1";
 const rarityClass: Record<Rarity,string> = { C:"common", R:"rare", SR:"sr", SSR:"ssr", UR:"ur" };
 const elementIcons: Record<string,string> = { FIRE:"✦", WATER:"◈", NATURE:"❋", LIGHTNING:"ϟ", ICE:"❄", EARTH:"⬟", LIGHT:"☼", DARKNESS:"◐" };
+
+function loadCollection(): Record<string,number> {
+  try {
+    const saved = localStorage.getItem(COLLECTION_STORAGE_KEY);
+    if (!saved) return {};
+    const parsed: unknown = JSON.parse(saved);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    const validIds = new Set(cards.map(card => card.id));
+    return Object.fromEntries(
+      Object.entries(parsed).filter(([id, quantity]) =>
+        validIds.has(id) && Number.isSafeInteger(quantity) && (quantity as number) > 0
+      )
+    ) as Record<string,number>;
+  } catch {
+    return {};
+  }
+}
 
 type Tab = "home" | "packs" | "collection" | "carddex";
 export default function App() {
   const [tab,setTab] = useState<Tab>("home");
-  const [owned,setOwned] = useState<Record<string,number>>({});
+  const [owned,setOwned] = useState<Record<string,number>>(loadCollection);
   const [revealed,setRevealed] = useState<CharacterCard[]>([]);
   const [opening,setOpening] = useState(false);
   const [filter,setFilter] = useState("ALL");
   const collection = useMemo(() => cards.filter(c => owned[c.id]),[owned]);
   const totalCopies = Object.values(owned).reduce((a,b)=>a+b,0);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(COLLECTION_STORAGE_KEY, JSON.stringify(owned));
+    } catch {
+      // The collection remains usable for this session if browser storage is unavailable.
+    }
+  }, [owned]);
+
   const doOpen = (count:number) => { if(opening) return; setOpening(true); setRevealed([]); window.setTimeout(()=>{ const pulls=openPack(count); setRevealed(pulls); setOwned(prev=>{const next={...prev}; pulls.forEach(c=>next[c.id]=(next[c.id]??0)+1); return next;}); setOpening(false); },650); };
   const nav = [{id:"home",label:"Home",icon:"⌂"},{id:"packs",label:"Packs",icon:"✧"},{id:"collection",label:"Collection",icon:"▦"},{id:"carddex",label:"Carddex",icon:"◫"}] as const;
   const cardTile = (card:CharacterCard,qty=0) => <article className={`character-card ${rarityClass[card.rarity]}`} key={card.id}><div className="card-art"><div className="art-glow"/><span className="art-symbol">{elementIcons[card.element]}</span><span className="art-initial">{card.name.split(" ").map(s=>s[0]).join("")}</span><span className="card-rarity">{card.rarity}</span></div><div className="card-info"><div className="card-name">{card.name}</div><div className="card-meta">{elementLabels[card.element]} · {card.role}</div>{qty>0&&<div className="card-qty">Owned ×{qty}</div>}</div></article>;
