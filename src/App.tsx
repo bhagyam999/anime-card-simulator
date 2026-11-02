@@ -3,7 +3,6 @@ import { cards, elementLabels } from "./data/cards";
 import { openPack, rarityRates } from "./systems/packs/openPack";
 import type { CharacterCard, Rarity } from "./types/game";
 
-const rarityNames: Record<Rarity,string> = { C:"Common", R:"Rare", SR:"Super Rare", SSR:"Super Super Rare", UR:"Ultra Rare" };
 const rarityClass: Record<Rarity,string> = { C:"common", R:"rare", SR:"sr", SSR:"ssr", UR:"ur" };
 const elementIcons: Record<string,string> = { FIRE:"✦", WATER:"◈", NATURE:"❋", LIGHTNING:"ϟ", ICE:"❄", EARTH:"⬟", LIGHT:"☼", DARKNESS:"◐" };
 
